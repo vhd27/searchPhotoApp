@@ -7,33 +7,21 @@ searchButton.addEventListener("click", searchPhotos);
 document.addEventListener("DOMContentLoaded", checkAccesKey);
 
 function checkAccesKey() {
-    const accesKey = localStorage.getItem("accesKey");
-
-    if (accesKey === null) {
-        // Eğer API anahtarı yoksa, kullanıcıdan al
-        const enteredKey = prompt("Please enter the correct Access Key.");
-        if (enteredKey && enteredKey !== "") {
-            // Anahtar geçerli mi kontrol et
-            testAccessKey(enteredKey).then(isValid => {
-                if (isValid) {
-                    localStorage.setItem("accesKey", enteredKey);
-                    getPhotos("a");  // Anahtar doğrulandı, başlangıçta fotoğraf araması yapılabilir
-                } else {
-                    alert("Invalid API Key! Please try again.");
-                    checkAccesKey();  // Geçersiz anahtar, tekrar iste
-                }
-            });
+    if (localStorage.getItem("accesKey") === null) {
+        const accesKey = prompt("Please enter the Access Key.");
+        if (accesKey !== null && accesKey !== "") {
+            localStorage.setItem("accesKey", accesKey);
+            getPhotos("").then(result => {
+                if (result === false) {
+                    alert("Invalid Access Key. Please try again!")
+                    localStorage.removeItem("accesKey");
+                    checkAccesKey();
+                };
+            })
         } else {
-            checkAccesKey();  // Geçersiz veya boş giriş, tekrar iste
+            checkAccesKey();
         }
     }
-}
-
-function testAccessKey(key) {
-    const url = `https://api.unsplash.com/photos?page=1&client_id=${key}`;
-    return fetch(url)
-        .then(response => response.status === 200)  // 200 status kodu geçerli anahtar demek
-        .catch(() => false);  // Hata durumunda geçersiz kabul et
 }
 
 function searchPhotos(e) {
@@ -44,6 +32,7 @@ function searchPhotos(e) {
 
 function addPhotosToUI(data) {
     data.then(photos => {
+        console.log(photos)
         photos.forEach(photo => {
             let div = document.createElement("div");
             div.className = "card";
@@ -57,11 +46,10 @@ async function getPhotos(keyword) {
     const accesKey = localStorage.getItem("accesKey");
     const url = `https://api.unsplash.com/search/photos?query=${keyword}&client_id=${accesKey}`;
     const response = await fetch(url);
-    if (response.status === 401) {
-        localStorage.removeItem("accesKey");
-        checkAccesKey();  // Anahtar geçersizse tekrar kontrol et
+    if (response.status !== 400 && response.status !== 200) {
+        return false;
     }
-    const data = await response.json();
 
+    const data = await response.json();
     return data.results;
 }
